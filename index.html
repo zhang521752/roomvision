@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>栖界AI - 智能室内设计工作室</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #08090d;
+  --bg-surface: #0f1219;
+  --bg-card: rgba(17,21,30,0.7);
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-glow: rgba(212,175,55,0.15);
+  --gold: #d4af37;
+  --gold-light: #e8d48b;
+  --gold-dim: rgba(212,175,55,0.12);
+  --text-primary: #f0f0f0;
+  --text-secondary: rgba(255,255,255,0.5);
+  --text-muted: rgba(255,255,255,0.3);
+  --glass-bg: rgba(255,255,255,0.03);
+  --glass-border: rgba(255,255,255,0.08);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --step-green: #34d399;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  background:var(--bg-deep);
+  color:var(--text-primary);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+/* 风格背景图 */
+.style-bg {
+  position:fixed; inset:0; z-index:0; overflow:hidden;
+}
+.style-bg .slide {
+  position:absolute; inset:0;
+  opacity:0; transition:opacity 0.8s ease;
+}
+.style-bg .slide.active { opacity:1; }
+.style-bg .slide.slide-left { animation:slideLeft 0.6s ease forwards; }
+.style-bg .slide.slide-right { animation:slideRight 0.6s ease forwards; }
+@keyframes slideLeft {
+  from { transform:translateX(60px); opacity:0; }
+  to { transform:translateX(0); opacity:1; }
+}
+@keyframes slideRight {
+  from { transform:translateX(-60px); opacity:0; }
+  to { transform:translateX(0); opacity:1; }
+}
+.style-bg::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(8,9,13,0.5) 0%, rgba(8,9,13,0.7) 50%, rgba(8,9,13,0.9) 100%);
+}
+.bg-orbs {
+  position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden;
+}
+.bg-orbs::before, .bg-orbs::after {
+  content:''; position:absolute; border-radius:50%; filter:blur(120px); opacity:0.12;
+}
+.bg-orbs::before {
+  width:600px; height:600px; top:-200px; right:-100px;
+  background:radial-gradient(circle, var(--gold) 0%, transparent 70%);
+}
+.bg-orbs::after {
+  width:500px; height:500px; bottom:-150px; left:-100px;
+  background:radial-gradient(circle, #4a3f6b 0%, transparent 70%);
+}
+.container { position:relative; z-index:2; max-width:960px; margin:0 auto; padding:0 24px; }
+
+/* Header */
+.header { padding:40px 0 20px; text-align:center; }
+.header .badge {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 16px; border-radius:100px;
+  background:var(--gold-dim); border:1px solid var(--border-glow);
+  font-size:0.75rem; font-weight:500; color:var(--gold-light);
+  letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px;
+}
+.header .badge::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--gold); animation:pulse 2s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.logo-img {
+  max-width:50px; width:100%; height:auto; margin:8px auto 4px; display:block;
+  filter:drop-shadow(0 0 30px rgba(212,175,55,0.15));
+}
+.header p { color:var(--text-secondary); font-size:0.9rem; margin-top:4px; font-weight:300; letter-spacing:0.02em; }
+
+/* Status Bar */
+.status-bar { display:flex; justify-content:center; gap:12px; padding:0 0 24px; flex-wrap:wrap; }
+.status-card {
+  background:var(--glass-bg); backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border); border-radius:var(--radius-sm);
+  padding:10px 20px; min-width:120px; text-align:center;
+  transition:border-color 0.3s;
+}
+.status-card:hover { border-color:var(--border-glow); }
+.status-card .label { color:var(--text-muted); font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px; }
+.status-card .value { font-size:0.8rem; font-weight:600; }
+.status-card .value.ok { color:#34d399; }
+.status-card .value.err { color:#f87171; }
+
+/* Step Progress Bar */
+.step-progress {
+  display:flex; align-items:center; justify-content:center; gap:0; padding:0 0 32px;
+}
+.step-dot-wrap {
+  display:flex; align-items:center;
+}
+.step-dot {
+  width:36px; height:36px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.8rem; font-weight:600;
+  border:2px solid var(--glass-border);
+  background:var(--glass-bg);
+  color:var(--text-muted);
+  transition:all 0.3s ease;
+  position:relative;
+}
+.step-dot.active {
+  border-color:var(--gold);
+  background:var(--gold-dim);
+  color:var(--gold-light);
+  box-shadow:0 0 20px rgba(212,175,55,0.2);
+}
+.step-dot.done {
+  border-color:var(--step-green);
+  background:rgba(52,211,153,0.12);
+  color:var(--step-green);
+}
+.step-line {
+  width:48px; height:2px;
+  background:var(--glass-border);
+  transition:background 0.3s ease;
+}
+.step-line.done {
+  background:var(--step-green);
+}
+.step-label {
+  position:absolute; top:42px; left:50%; transform:translateX(-50%);
+  font-size:0.6rem; color:var(--text-muted); white-space:nowrap;
+  letter-spacing:0.04em;
+}
+.step-dot.active .step-label { color:var(--gold-light); }
+.step-dot.done .step-label { color:var(--step-green); }
+
+/* Main Card */
+.main-card {
+  background:var(--bg-card); backdrop-filter:blur(40px);
+  border:1px solid var(--border-subtle); border-radius:var(--radius);
+  padding:40px; position:relative; overflow:hidden;
+}
+.main-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--gold-dim), var(--gold), var(--gold-dim), transparent);
+}
+
+/* Step Container */
+.step-container {
+  display:none;
+  animation:fadeIn 0.3s ease;
+}
+.step-container.active {
+  display:block;
+}
+@keyframes fadeIn {
+  from { opacity:0; transform:translateY(12px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+/* Step Title */
+.step-title {
+  font-family:'Playfair Display',serif; font-size:1.8rem; font-weight:700;
+  margin-bottom:8px; color:var(--text-primary);
+  background:linear-gradient(135deg,#fff 0%,var(--gold-light) 50%,var(--gold) 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.step-subtitle {
+  color:var(--text-secondary); font-size:0.95rem; font-weight:300; margin-bottom:28px;
+  line-height:1.6;
+}
+
+/* Upload Area */
+.upload-area {
+  border:2px dashed var(--glass-border); border-radius:var(--radius-sm);
+  padding:40px 20px; text-align:center; cursor:pointer;
+  transition:all 0.3s; position:relative; overflow:hidden;
+  background:rgba(255,255,255,0.01);
+}
+.upload-area:hover {
+  border-color:rgba(212,175,55,0.4); background:var(--gold-dim);
+}
+.upload-area.has-image {
+  border-style:solid; border-color:var(--gold); padding:0;
+}
+.upload-area .upload-icon {
+  font-size:2.4rem; margin-bottom:12px; opacity:0.6;
+}
+.upload-area .upload-text {
+  color:var(--text-secondary); font-size:0.9rem; font-weight:300;
+}
+.upload-area .upload-hint {
+  color:var(--text-muted); font-size:0.75rem; margin-top:8px;
+}
+.upload-area .upload-btns {
+  display:flex; gap:12px; justify-content:center; margin-top:16px;
+}
+.upload-area .upload-btns button {
+  padding:10px 24px; border-radius:var(--radius-sm);
+  font-family:'Inter',sans-serif; font-size:0.85rem; font-weight:500;
+  cursor:pointer; transition:all 0.3s; border:1px solid var(--glass-border);
+}
+.upload-area .btn-camera {
+  background:var(--gold-dim); color:var(--gold-light);
+  border-color:var(--border-glow) !important;
+}
+.upload-area .btn-camera:hover { background:rgba(212,175,55,0.2); }
+.upload-area .btn-album {
+  background:rgba(255,255,255,0.04); color:var(--text-secondary);
+}
+.upload-area .btn-album:hover { background:rgba(255,255,255,0.08); }
+.upload-preview {
+  width:100%; border-radius:calc(var(--radius-sm) - 2px);
+  display:block; max-height:300px; object-fit:cover;
+}
+.upload-remove {
+  position:absolute; top:12px; right:12px;
+  width:32px; height:32px; border-radius:50%;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,0.1); color:#fff;
+  font-size:1rem; cursor:pointer; display:flex;
+  align-items:center; justify-content:center;
+  transition:all 0.2s;
+}
+.upload-remove:hover { background:rgba(248,113,113,0.8); }
+input[type="file"] { display:none; }
+
+/* Step Buttons */
+.step-actions {
+  display:flex; gap:12px; margin-top:28px; justify-content:space-between;
+  flex-wrap:wrap;
+}
+.btn-next {
+  padding:14px 36px; border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--gold) 0%,#c9a227 100%);
+  color:#0a0a0a; border:none; font-family:'Inter',sans-serif;
+  font-size:0.95rem; font-weight:600; cursor:pointer;
+  transition:all 0.3s; position:relative; overflow:hidden;
+}
+.btn-next::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,transparent 0%,rgba(255,255,255,0.15) 50%,transparent 100%);
+  transform:translateX(-100%); transition:transform 0.5s;
+}
+.btn-next:hover::after { transform:translateX(100%); }
+.btn-next:hover { box-shadow:0 4px 30px rgba(212,175,55,0.3); transform:translateY(-1px); }
+.btn-next:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+.btn-prev {
+  padding:14px 28px; border-radius:var(--radius-sm);
+  background:rgba(255,255,255,0.04); border:1px solid var(--glass-border);
+  color:var(--text-secondary); font-family:'Inter',sans-serif;
+  font-size:0.9rem; font-weight:500; cursor:pointer;
+  transition:all 0.3s;
+}
+.btn-prev:hover { background:rgba(255,255,255,0.08); }
+.btn-secondary {
+  padding:14px 28px; border-radius:var(--radius-sm);
+  background:rgba(255,255,255,0.04); border:1px solid var(--glass-border);
+  color:var(--text-secondary); font-family:'Inter',sans-serif;
+  font-size:0.9rem; font-weight:500; cursor:pointer;
+  transition:all 0.3s;
+}
+.btn-secondary:hover { background:rgba(255,255,255,0.08); }
+
+/* Loading */
+.loading { text-align:center; padding:48px 0; }
+.loading .ring {
+  width:48px; height:48px; margin:0 auto 16px;
+  border:2px solid var(--glass-border); border-top-color:var(--gold);
+  border-radius:50%; animation:spin 1s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading p { color:var(--text-secondary); font-size:0.9rem; font-weight:300; }
+
+/* Analysis Result Card */
+.analysis-card {
+  background:var(--glass-bg); backdrop-filter:blur(20px);
+  border:1px solid var(--border-glow); border-radius:var(--radius-sm);
+  padding:24px; margin-top:20px;
+}
+.analysis-card .analysis-title {
+  font-size:0.75rem; color:var(--gold-light); text-transform:uppercase;
+  letter-spacing:0.1em; font-weight:500; margin-bottom:16px;
+}
+.analysis-row {
+  display:flex; align-items:center; padding:10px 0;
+  border-bottom:1px solid var(--border-subtle);
+}
+.analysis-row:last-child { border-bottom:none; }
+.analysis-row .row-label {
+  color:var(--text-muted); font-size:0.8rem; min-width:80px;
+  font-weight:400;
+}
+.analysis-row .row-value {
+  color:var(--text-primary); font-size:0.9rem; font-weight:500;
+  flex:1;
+}
+.analysis-desc {
+  margin-top:12px; padding:12px 16px;
+  background:rgba(255,255,255,0.02); border-radius:8px;
+  color:var(--text-secondary); font-size:0.85rem; line-height:1.6;
+  font-weight:300;
+}
+
+/* Style Card Grid */
+.style-grid {
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;
+}
+.style-card {
+  position:relative; border-radius:var(--radius-sm); overflow:hidden;
+  border:2px solid var(--glass-border); cursor:pointer;
+  transition:all 0.3s ease; background:var(--bg-surface);
+}
+.style-card:hover {
+  border-color:rgba(212,175,55,0.4); transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,0.3);
+}
+.style-card.active {
+  border-color:var(--gold);
+  box-shadow:0 0 20px rgba(212,175,55,0.2);
+}
+.style-card.active::after {
+  content:'\2713'; position:absolute; top:8px; right:8px;
+  width:22px; height:22px; border-radius:50%;
+  background:var(--gold); color:#0a0a0a;
+  font-size:0.7rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+}
+.style-thumb {
+  width:100%; aspect-ratio:4/3; object-fit:cover; display:block;
+}
+.style-name {
+  display:block; padding:8px 0; text-align:center;
+  font-size:0.8rem; font-weight:500; color:var(--text-secondary);
+}
+.style-card.active .style-name { color:var(--gold-light); }
+.style-card .pro-badge {
+  position:absolute; top:6px; left:6px;
+}
+.style-card.style-locked {
+  opacity:0.35; cursor:not-allowed; pointer-events:none;
+}
+.style-card.style-locked .style-thumb {
+  filter:grayscale(0.6);
+}
+
+/* Pill Selector */
+.dimension-group {
+  margin-bottom:24px;
+}
+.dimension-label {
+  color:var(--text-secondary); font-size:0.75rem;
+  font-weight:500; text-transform:uppercase; letter-spacing:0.1em;
+  margin-bottom:10px;
+}
+.pill-row {
+  display:flex; flex-wrap:wrap; gap:8px;
+}
+.pill {
+  padding:10px 20px; border-radius:100px;
+  background:rgba(255,255,255,0.03); border:1px solid var(--glass-border);
+  color:var(--text-secondary); font-size:0.85rem; font-weight:400;
+  cursor:pointer; transition:all 0.3s ease;
+  user-select:none;
+}
+.pill:hover {
+  border-color:rgba(212,175,55,0.3); color:var(--gold-light);
+}
+.pill.active {
+  border-color:var(--gold);
+  background:var(--gold-dim);
+  color:var(--gold-light);
+  box-shadow:0 0 16px rgba(212,175,55,0.1);
+}
+.pill.pill-locked {
+  opacity:0.35;
+  cursor:not-allowed;
+  border-style:dashed;
+}
+
+/* Custom Prompt */
+.custom-prompt {
+  width:100%; min-height:80px; padding:14px 18px; resize:vertical;
+  background:rgba(255,255,255,0.04); border:1px solid var(--glass-border);
+  border-radius:var(--radius-sm); color:var(--text-primary);
+  font-family:'Inter',sans-serif; font-size:0.9rem; line-height:1.6;
+  transition:border-color 0.3s;
+}
+.custom-prompt:focus { outline:none; border-color:var(--gold); }
+.custom-prompt:disabled {
+  opacity:0.35; cursor:not-allowed;
+  -webkit-text-fill-color:var(--text-muted);
+}
+.custom-prompt::placeholder { color:var(--text-muted); }
+.pro-badge {
+  display:inline-flex; align-items:center; padding:2px 8px;
+  border-radius:100px; font-size:0.6rem; font-weight:600;
+  background:linear-gradient(135deg,var(--gold),#c9a227);
+  color:#0a0a0a; letter-spacing:0.08em; vertical-align:middle;
+  margin-left:6px;
+}
+.prompt-hint {
+  font-size:0.7rem; color:var(--text-muted); margin-top:6px;
+}
+.prompt-lock {
+  display:none; margin-top:8px; padding:10px 16px;
+  border-radius:var(--radius-sm); cursor:pointer;
+  background:var(--gold-dim); border:1px solid var(--border-glow);
+  color:var(--gold-light); font-size:0.8rem; font-weight:500;
+  text-align:center; transition:all 0.3s;
+}
+.prompt-lock:hover { background:rgba(212,175,55,0.2); }
+.prompt-lock .lock-icon { margin-right:4px; }
+.prompt-lock.visible { display:block; }
+
+/* Generate Button */
+.btn-generate {
+  width:100%; padding:18px; margin-top:8px;
+  background:linear-gradient(135deg,var(--gold) 0%,#c9a227 100%);
+  color:#0a0a0a; border:none; border-radius:var(--radius-sm);
+  font-family:'Inter',sans-serif; font-size:1rem; font-weight:600;
+  letter-spacing:0.04em; cursor:pointer;
+  transition:all 0.3s; position:relative; overflow:hidden;
+}
+.btn-generate::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,transparent 0%,rgba(255,255,255,0.15) 50%,transparent 100%);
+  transform:translateX(-100%); transition:transform 0.5s;
+}
+.btn-generate:hover::after { transform:translateX(100%); }
+.btn-generate:hover { box-shadow:0 4px 30px rgba(212,175,55,0.3); transform:translateY(-1px); }
+.btn-generate:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+/* Compare Wrap - 原图 vs 设计方案对比 */
+.compare-wrap {
+  display:flex; align-items:center; gap:20px; margin-top:20px;
+  justify-content:center; flex-wrap:wrap;
+}
+.compare-item {
+  flex:1; min-width:200px; max-width:400px; text-align:center;
+}
+.compare-label {
+  font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;
+  letter-spacing:0.1em; margin-bottom:10px; font-weight:500;
+}
+.compare-img {
+  width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--radius-sm);
+  border:1px solid var(--border-subtle); display:block;
+  box-shadow:0 8px 32px rgba(0,0,0,0.3);
+  transition:transform 0.3s ease, box-shadow 0.3s ease;
+}
+.compare-img:hover {
+  transform:scale(1.02);
+  box-shadow:0 12px 48px rgba(0,0,0,0.5);
+}
+.compare-arrow {
+  font-size:2rem; color:var(--gold); flex-shrink:0;
+  animation:arrowPulse 2s ease infinite;
+}
+@keyframes arrowPulse {
+  0%,100% { opacity:0.6; transform:translateX(0); }
+  50% { opacity:1; transform:translateX(4px); }
+}
+
+/* Regen Hint */
+.regen-hint {
+  text-align:center; margin-top:16px; padding:12px 20px;
+  background:var(--gold-dim); border:1px solid var(--border-glow);
+  border-radius:var(--radius-sm); color:var(--text-secondary);
+  font-size:0.85rem;
+}
+
+/* Result Grid 2x2 (保留兼容) */
+.result-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px;
+}
+.result-item {
+  border-radius:var(--radius-sm); overflow:hidden;
+  border:1px solid var(--border-subtle); position:relative;
+  transition:all 0.3s ease; cursor:pointer;
+}
+.result-item:hover {
+  transform:scale(1.03);
+  border-color:var(--border-glow);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+.result-item img {
+  width:100%; aspect-ratio:4/3; object-fit:cover; display:block;
+}
+.result-item .select-btn {
+  position:absolute; bottom:12px; left:12px; right:12px;
+  padding:8px 0; border-radius:8px;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(10px);
+  border:1px solid var(--border-glow);
+  color:var(--gold-light); font-size:0.8rem; font-weight:500;
+  cursor:pointer; text-align:center; transition:all 0.3s;
+  opacity:0;
+}
+.result-item:hover .select-btn { opacity:1; }
+.result-item .select-btn:hover {
+  background:var(--gold-dim); border-color:var(--gold);
+}
+
+/* Refine Section */
+.refine-image {
+  width:100%; border-radius:var(--radius-sm);
+  border:1px solid var(--border-subtle);
+  box-shadow:0 8px 40px rgba(0,0,0,0.4);
+  margin-bottom:20px;
+}
+.refine-input-wrap {
+  position:relative; margin-top:16px;
+}
+.refine-input {
+  width:100%; padding:14px 18px; resize:none;
+  background:rgba(255,255,255,0.04); border:1px solid var(--glass-border);
+  border-radius:var(--radius-sm); color:var(--text-primary);
+  font-family:'Inter',sans-serif; font-size:0.9rem; line-height:1.6;
+  min-height:56px; transition:border-color 0.3s;
+}
+.refine-input:focus { outline:none; border-color:var(--gold); }
+.refine-input::placeholder { color:var(--text-muted); }
+.refine-examples {
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;
+}
+.refine-example {
+  padding:6px 14px; border-radius:100px;
+  background:rgba(255,255,255,0.03); border:1px solid var(--glass-border);
+  color:var(--text-muted); font-size:0.75rem; cursor:pointer;
+  transition:all 0.3s;
+}
+.refine-example:hover {
+  border-color:rgba(212,175,55,0.3); color:var(--gold-light); background:var(--gold-dim);
+}
+
+/* Result Meta */
+.result .meta {
+  display:flex; gap:16px; flex-wrap:wrap; margin-top:12px;
+}
+.result .meta span {
+  font-size:0.75rem; color:var(--text-muted);
+  padding:4px 12px; background:rgba(255,255,255,0.04);
+  border-radius:100px; border:1px solid var(--border-subtle);
+}
+.result .success-tag {
+  display:inline-flex; align-items:center; gap:6px;
+  color:#34d399; font-size:0.85rem; font-weight:500; margin-bottom:12px;
+}
+.result .success-tag::before { content:''; width:8px; height:8px; border-radius:50%; background:#34d399; }
+
+/* Result Actions */
+.result-actions {
+  display:flex; gap:12px; flex-wrap:wrap; margin-top:20px;
+}
+.btn-download {
+  padding:10px 20px; border-radius:var(--radius-sm);
+  background:var(--gold-dim); border:1px solid var(--border-glow);
+  color:var(--gold-light); font-family:'Inter',sans-serif;
+  font-size:0.85rem; font-weight:500; cursor:pointer;
+  text-decoration:none; transition:all 0.3s;
+}
+.btn-download:hover { background:rgba(212,175,55,0.2); }
+
+/* Error */
+.error-msg { color:#f87171; font-size:0.9rem; margin-top:16px; }
+
+/* Upgrade Tip */
+.upgrade-tip {
+  text-align:center; padding:32px 24px;
+  background:linear-gradient(135deg,rgba(212,175,55,0.08) 0%,rgba(212,175,55,0.02) 100%);
+  border:1px solid var(--border-glow); border-radius:var(--radius);
+}
+.upgrade-icon { font-size:2rem; margin-bottom:12px; }
+.upgrade-title {
+  font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:600;
+  color:var(--gold-light); margin-bottom:8px;
+}
+.upgrade-desc {
+  color:var(--text-secondary); font-size:0.85rem; line-height:1.6; max-width:400px; margin:0 auto 20px;
+}
+.upgrade-features { display:inline-flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+.uf-item {
+  font-size:0.8rem; color:var(--gold-light); text-align:left;
+  padding:6px 16px; background:var(--gold-dim); border-radius:100px;
+}
+.upgrade-action {
+  font-size:0.85rem; color:var(--text-primary); font-weight:500;
+  padding:12px 24px; background:linear-gradient(135deg,var(--gold),#c9a227);
+  color:#0a0a0a; border-radius:var(--radius-sm); display:inline-block;
+}
+
+/* Coming Soon */
+.coming-soon {
+  margin-top:40px; display:grid; grid-template-columns:1fr 1fr; gap:20px;
+}
+.coming-card {
+  background:var(--bg-card); backdrop-filter:blur(40px);
+  border:1px solid var(--border-subtle); border-radius:var(--radius);
+  padding:32px; position:relative; overflow:hidden;
+  cursor:default; transition:border-color 0.3s;
+}
+.coming-card:hover { border-color:var(--border-glow); }
+.coming-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+}
+.coming-card .card-icon {
+  width:48px; height:48px; border-radius:12px;
+  background:var(--gold-dim); border:1px solid var(--border-glow);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; margin-bottom:18px;
+}
+.coming-card h3 {
+  font-family:'Playfair Display',serif; font-size:1.15rem; font-weight:600;
+  color:var(--text-primary); margin-bottom:8px;
+}
+.coming-card p {
+  color:var(--text-secondary); font-size:0.85rem; line-height:1.6; font-weight:300;
+}
+.coming-card .badge-soon {
+  display:inline-flex; align-items:center; gap:5px;
+  margin-top:16px; padding:5px 14px; border-radius:100px;
+  background:rgba(212,175,55,0.08); border:1px solid var(--border-glow);
+  font-size:0.7rem; font-weight:500; color:var(--gold-light);
+  letter-spacing:0.06em;
+}
+.coming-card .badge-soon::before {
+  content:''; width:5px; height:5px; border-radius:50%; background:var(--gold);
+  animation:pulse 2s ease infinite;
+}
+.coming-card .lock-overlay {
+  position:absolute; top:16px; right:16px;
+  width:28px; height:28px; border-radius:8px;
+  background:rgba(255,255,255,0.04); border:1px solid var(--glass-border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.7rem; color:var(--text-muted);
+}
+
+/* Footer */
+.footer { text-align:center; padding:40px 0 32px; color:var(--text-muted); font-size:0.75rem; letter-spacing:0.05em; }
+
+/* User Level Selector */
+.level-selector {
+  display:flex; gap:8px; margin-top:8px;
+}
+.level-pill {
+  padding:8px 18px; border-radius:100px;
+  background:rgba(255,255,255,0.03); border:1px solid var(--glass-border);
+  color:var(--text-secondary); font-size:0.8rem; cursor:pointer;
+  transition:all 0.3s ease;
+}
+.level-pill:hover { border-color:rgba(212,175,55,0.3); color:var(--gold-light); }
+.level-pill.active {
+  border-color:var(--gold); background:var(--gold-dim); color:var(--gold-light);
+}
+
+/* Responsive */
+@media(max-width:640px) {
+  .header h1 { font-size:2.2rem; }
+  .header { padding:24px 0 12px; }
+  .main-card { padding:24px; }
+  .status-bar { gap:8px; }
+  .status-card { min-width:90px; padding:8px 10px; }
+  .coming-soon { grid-template-columns:1fr; }
+  .result-grid { grid-template-columns:1fr; }
+  .step-title { font-size:1.4rem; }
+  .step-line { width:24px; }
+  .step-dot { width:30px; height:30px; font-size:0.7rem; }
+  .pill { padding:8px 14px; font-size:0.8rem; }
+  .step-actions { flex-direction:column; }
+  .btn-next, .btn-prev, .btn-secondary { width:100%; text-align:center; }
+  .style-grid { grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .compare-wrap { flex-direction:column; }
+  .compare-arrow { transform:rotate(90deg); }
+}
+
+/* Tab Navigation */
+.tab-nav { display:flex; gap:6px; margin-bottom:24px; background:var(--glass-bg); border-radius:14px; padding:6px; border:1px solid var(--glass-border); }
+.tab-btn { flex:1; padding:16px 24px; border-radius:10px; font-family:'Inter',sans-serif; font-size:1.1rem; font-weight:600; cursor:pointer; transition:all 0.3s; background:transparent; border:1px solid transparent; color:rgba(255,255,255,0.5); letter-spacing:0.02em; }
+.tab-btn.active { background:var(--gold-dim); color:var(--gold-light); border:1px solid var(--border-glow); box-shadow:0 2px 12px rgba(212,175,55,0.15); }
+.tab-btn:hover:not(.active) { color:rgba(255,255,255,0.8); background:rgba(255,255,255,0.06); }
+
+/* Feed View */
+.feed-view { display:none; }
+.feed-view.active { display:block; }
+.feed-filters { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+.filter-pill { padding:8px 18px; border-radius:100px; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); color:var(--text-secondary); font-size:0.8rem; cursor:pointer; transition:all 0.3s; }
+.filter-pill:hover { border-color:rgba(212,175,55,0.3); color:var(--gold-light); }
+.filter-pill.active { border-color:var(--gold); background:var(--gold-dim); color:var(--gold-light); }
+
+/* Masonry Grid */
+.masonry { column-count:2; column-gap:16px; }
+.masonry-item { break-inside:avoid; margin-bottom:16px; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border-subtle); cursor:pointer; transition:all 0.3s; position:relative; background:var(--bg-card); }
+.masonry-item:hover { transform:translateY(-4px); border-color:var(--border-glow); box-shadow:0 12px 40px rgba(0,0,0,0.4); }
+.masonry-item img { width:100%; display:block; transition:transform 0.3s; }
+.masonry-item:hover img { transform:scale(1.03); }
+.masonry-overlay { position:absolute; bottom:0; left:0; right:0; padding:16px; background:linear-gradient(transparent, rgba(0,0,0,0.8)); opacity:0; transition:opacity 0.3s; }
+.masonry-item:hover .masonry-overlay { opacity:1; }
+.masonry-overlay .masonry-title { color:#fff; font-size:0.9rem; font-weight:500; margin-bottom:4px; }
+.masonry-overlay .masonry-desc { color:rgba(255,255,255,0.7); font-size:0.75rem; line-height:1.4; }
+.masonry-overlay .masonry-tags { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.masonry-overlay .masonry-tag { padding:3px 10px; border-radius:100px; background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.9); font-size:0.65rem; }
+.masonry-style { position:absolute; top:12px; left:12px; padding:4px 12px; border-radius:100px; background:var(--gold-dim); border:1px solid var(--border-glow); color:var(--gold-light); font-size:0.7rem; font-weight:500; opacity:0; transition:opacity 0.3s; }
+.masonry-item:hover .masonry-style { opacity:1; }
+.masonry-like { position:absolute; top:12px; right:12px; display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:100px; background:rgba(0,0,0,0.5); backdrop-filter:blur(10px); color:rgba(255,255,255,0.8); font-size:0.7rem; opacity:0; transition:opacity 0.3s; }
+.masonry-item:hover .masonry-like { opacity:1; }
+.masonry-cta { position:absolute; bottom:12px; right:12px; padding:8px 16px; border-radius:8px; background:linear-gradient(135deg,var(--gold),#c9a227); color:#0a0a0a; font-size:0.75rem; font-weight:600; cursor:pointer; opacity:0; transition:all 0.3s; border:none; }
+.masonry-item:hover .masonry-cta { opacity:1; }
+.masonry-cta:hover { transform:scale(1.05); box-shadow:0 4px 20px rgba(212,175,55,0.3); }
+
+/* Design view wrapper */
+.design-view { display:none; }
+.design-view.active { display:block; }
+
+/* User Bar */
+.user-bar { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:var(--glass-bg); border-radius:var(--radius-sm); border:1px solid var(--glass-border); margin-bottom:12px; }
+.user-info { display:flex; align-items:center; gap:10px; }
+.user-avatar { width:36px; height:36px; border-radius:50%; background:var(--gold-dim); border:1px solid var(--border-glow); display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+.user-name { font-size:0.9rem; font-weight:500; color:var(--text-primary); }
+.login-prompt { display:flex; align-items:center; gap:8px; }
+.login-prompt span { font-size:0.85rem; color:var(--text-secondary); }
+.btn-login { padding:8px 20px; border-radius:8px; background:linear-gradient(135deg,var(--gold),#c9a227); color:#0a0a0a; font-size:0.8rem; font-weight:600; cursor:pointer; border:none; transition:all 0.3s; }
+.btn-login:hover { box-shadow:0 4px 20px rgba(212,175,55,0.3); transform:translateY(-1px); }
+.btn-logout { padding:6px 12px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); color:var(--text-secondary); font-size:0.72rem; cursor:pointer; transition:all 0.3s; }
+.btn-logout:hover { color:var(--text-primary); border-color:rgba(255,255,255,0.15); }
+
+/* Points Bar */
+.points-bar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--glass-bg); border-radius:var(--radius-sm); border:1px solid var(--glass-border); margin-bottom:16px; flex-wrap:wrap; }
+.points-amount { display:flex; align-items:center; gap:6px; font-size:1.1rem; font-weight:600; color:var(--gold-light); }
+.points-amount .pts-icon { font-size:1rem; }
+.points-tier { padding:3px 10px; border-radius:100px; font-size:0.7rem; font-weight:500; }
+.tier-free { background:rgba(255,255,255,0.06); color:var(--text-secondary); border:1px solid var(--glass-border); }
+.tier-pass_7day { background:var(--gold-dim); color:var(--gold-light); border:1px solid var(--border-glow); }
+.tier-pass_30day { background:linear-gradient(135deg,rgba(212,175,55,0.2),rgba(255,215,0,0.15)); color:#ffd700; border:1px solid rgba(255,215,0,0.4); }
+.points-actions { margin-left:auto; display:flex; gap:8px; }
+.points-btn { padding:6px 14px; border-radius:8px; font-size:0.75rem; font-weight:500; cursor:pointer; transition:all 0.3s; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color:var(--text-secondary); }
+.points-btn:hover { border-color:var(--border-glow); color:var(--gold-light); }
+.points-btn.primary { background:linear-gradient(135deg,var(--gold),#c9a227); color:#0a0a0a; border:none; font-weight:600; }
+.points-btn.primary:hover { box-shadow:0 4px 20px rgba(212,175,55,0.3); transform:translateY(-1px); }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:1000; justify-content:center; align-items:center; }
+.modal-overlay.active { display:flex; }
+.modal { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:16px; padding:32px; max-width:520px; width:90%; max-height:85vh; overflow-y:auto; position:relative; }
+.modal-close { position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-secondary); font-size:1.2rem; cursor:pointer; padding:4px 8px; border-radius:8px; }
+.modal-close:hover { color:var(--text-primary); background:rgba(255,255,255,0.05); }
+.modal h2 { font-size:1.3rem; font-weight:600; margin-bottom:8px; color:var(--text-primary); }
+.modal p.sub { color:var(--text-secondary); font-size:0.85rem; margin-bottom:24px; }
+
+/* Package Cards */
+.pkg-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
+.pkg-card { padding:16px; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.02); cursor:pointer; transition:all 0.3s; position:relative; }
+.pkg-card:hover { border-color:var(--border-glow); background:rgba(255,255,255,0.04); }
+.pkg-card.popular { border-color:var(--gold); background:var(--gold-dim); }
+.pkg-card .pkg-badge { position:absolute; top:-8px; right:12px; padding:2px 10px; border-radius:100px; background:linear-gradient(135deg,var(--gold),#c9a227); color:#0a0a0a; font-size:0.6rem; font-weight:700; }
+.pkg-card .pkg-points { font-size:1.4rem; font-weight:700; color:var(--text-primary); }
+.pkg-card .pkg-bonus { font-size:0.7rem; color:var(--gold-light); margin-top:2px; }
+.pkg-card .pkg-price { font-size:1.1rem; font-weight:600; color:var(--gold-light); margin-top:8px; }
+
+/* Pass Cards */
+.pass-grid { display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+.pass-card { padding:20px; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.02); cursor:pointer; transition:all 0.3s; }
+.pass-card:hover { border-color:var(--border-glow); }
+.pass-card .pass-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.pass-card .pass-title { font-size:1rem; font-weight:600; color:var(--text-primary); }
+.pass-card .pass-price { font-size:1.2rem; font-weight:700; color:var(--gold-light); }
+.pass-card .pass-desc { font-size:0.8rem; color:var(--text-secondary); margin-bottom:12px; }
+.pass-card .pass-features { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.pass-card .pass-feat { font-size:0.72rem; color:var(--text-secondary); display:flex; align-items:center; gap:4px; }
+.pass-card .pass-feat::before { content:'\2713'; color:var(--gold); font-size:0.65rem; }
+
+/* Auth Modal */
+.auth-modal-content { max-width:380px; }
+.auth-modal-content h2 { text-align:center; margin-bottom:4px; }
+.auth-modal-content .auth-subtitle { text-align:center; color:var(--text-secondary); font-size:0.85rem; margin-bottom:24px; }
+.auth-form { display:flex; flex-direction:column; gap:14px; }
+.auth-input { width:100%; padding:12px 16px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.04); color:var(--text-primary); font-size:0.9rem; outline:none; transition:border-color 0.3s; box-sizing:border-box; }
+.auth-input:focus { border-color:var(--gold); }
+.auth-input::placeholder { color:var(--text-secondary); opacity:0.5; }
+.auth-submit { width:100%; padding:12px; border-radius:10px; background:linear-gradient(135deg,var(--gold),#c9a227); color:#0a0a0a; font-size:0.9rem; font-weight:600; cursor:pointer; border:none; transition:all 0.3s; }
+.auth-submit:hover { box-shadow:0 4px 20px rgba(212,175,55,0.3); }
+.auth-switch { text-align:center; margin-top:16px; font-size:0.8rem; color:var(--text-secondary); }
+.auth-switch a { color:var(--gold-light); cursor:pointer; text-decoration:underline; }
+.auth-error { color:#ff6b6b; font-size:0.78rem; text-align:center; min-height:18px; }
+.auth-gift { text-align:center; padding:10px; border-radius:8px; background:var(--gold-dim); border:1px solid var(--border-glow); margin-bottom:16px; font-size:0.8rem; color:var(--gold-light); }
+
+/* Resolution selector */
+.res-selector { display:flex; gap:8px; margin-top:12px; }
+.res-option { padding:8px 16px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); cursor:pointer; transition:all 0.3s; font-size:0.8rem; color:var(--text-secondary); }
+.res-option:hover { border-color:var(--border-glow); }
+.res-option.active { border-color:var(--gold); background:var(--gold-dim); color:var(--gold-light); }
+.res-option.locked { opacity:0.4; cursor:not-allowed; }
+.res-option .res-cost { font-size:0.65rem; color:var(--text-secondary); margin-top:2px; }
+.res-option.active .res-cost { color:var(--gold); }
+
+/* Locked feature */
+.locked-overlay { position:relative; }
+.locked-overlay::after { content:'\1F512'; position:absolute; top:4px; right:4px; font-size:0.7rem; opacity:0.5; }
+.locked-overlay.disabled { opacity:0.4; pointer-events:none; }
+
+@media(max-width:640px) {
+  .masonry { column-count:1; }
+  .tab-btn { padding:12px 14px; font-size:0.95rem; }
+}
+</style>
+</head>
+<body>
+<div class="style-bg" id="styleBg"></div>
+<div class="bg-orbs"></div>
+<div class="container">
+  <div class="header">
+    <div class="badge">AI 驱动</div>
+    <img src="/styles/LOGO.png" alt="栖界AI" class="logo-img">
+    <p>智能室内设计工作室</p>
+  </div>
+  <div class="status-bar" id="statusBar">
+    <div class="status-card"><div class="label">GPT-Image</div><div class="value" id="stGpt">--</div></div>
+    <div class="status-card"><div class="label">Gemini3</div><div class="value" id="stGem">--</div></div>
+    <div class="status-card"><div class="label">豆包</div><div class="value" id="stDb">--</div></div>
+  </div>
+
+  <!-- Step Progress -->
+  <div class="step-progress" id="stepProgress">
+    <div class="step-dot-wrap">
+      <div class="step-dot active" data-step="1">1<span class="step-label">上传</span></div>
+    </div>
+    <div class="step-line" data-line="1"></div>
+    <div class="step-dot-wrap">
+      <div class="step-dot" data-step="2">2<span class="step-label">识别</span></div>
+    </div>
+    <div class="step-line" data-line="2"></div>
+    <div class="step-dot-wrap">
+      <div class="step-dot" data-step="3">3<span class="step-label">选择</span></div>
+    </div>
+    <div class="step-line" data-line="3"></div>
+    <div class="step-dot-wrap">
+      <div class="step-dot" data-step="4">4<span class="step-label">生成</span></div>
+    </div>
+    <div class="step-line" data-line="4"></div>
+    <div class="step-dot-wrap">
+      <div class="step-dot" data-step="5">5<span class="step-label">微调</span></div>
+    </div>
+  </div>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('feed')">&#10024; 灵感</button>
+    <button class="tab-btn" onclick="switchTab('design')">&#127912; 设计</button>
+  </div>
+
+  <!-- User + Points Bar (全局可见) -->
+  <div class="user-bar" id="userBar">
+    <div class="user-info" id="userInfo">
+      <div class="login-prompt" id="loginPrompt">
+        <span>登录后保存设计记录</span>
+        <button class="btn-login" onclick="openModal('auth')">登录 / 注册</button>
+      </div>
+    </div>
+  </div>
+  <div class="points-bar" id="pointsBar" style="display:none;">
+    <div class="points-amount">
+      <span class="pts-icon">&#10024;</span>
+      <span id="pointsDisplay">0</span> 创想点
+    </div>
+    <span class="points-tier tier-free" id="tierBadge">免费版</span>
+    <div class="points-actions">
+      <button class="points-btn" onclick="openModal('recharge')">充值</button>
+      <button class="points-btn primary" onclick="openModal('upgrade')">升级通行证</button>
+    </div>
+  </div>
+
+  <div class="feed-view active" id="feedView">
+    <div class="feed-filters" id="feedFilters">
+      <div class="filter-pill active" data-filter="all" onclick="filterFeed('all')">全部</div>
+      <div class="filter-pill" data-filter="现代简约" onclick="filterFeed('现代简约')">现代简约</div>
+      <div class="filter-pill" data-filter="奶油风" onclick="filterFeed('奶油风')">奶油风</div>
+      <div class="filter-pill" data-filter="北欧" onclick="filterFeed('北欧')">北欧</div>
+      <div class="filter-pill" data-filter="日式" onclick="filterFeed('日式')">日式</div>
+      <div class="filter-pill" data-filter="工业风" onclick="filterFeed('工业风')">工业风</div>
+      <div class="filter-pill" data-filter="轻奢" onclick="filterFeed('轻奢')">轻奢</div>
+      <div class="filter-pill" data-filter="新中式" onclick="filterFeed('新中式')">新中式</div>
+      <div class="filter-pill" data-filter="原木风" onclick="filterFeed('原木风')">原木风</div>
+      <div class="filter-pill" data-filter="极简主义" onclick="filterFeed('极简主义')">极简主义</div>
+      <div class="filter-pill" data-filter="波西米亚" onclick="filterFeed('波西米亚')">波西米亚</div>
+      <div class="filter-pill" data-filter="装饰艺术" onclick="filterFeed('装饰艺术')">装饰艺术</div>
+      <div class="filter-pill" data-filter="乡村田园" onclick="filterFeed('乡村田园')">乡村田园</div>
+    </div>
+    <div class="masonry" id="feedGrid"></div>
+    <div class="feed-empty" id="feedEmpty" style="display:none">
+      <div class="feed-empty-icon">&#128444;</div>
+      <p>暂无该风格的灵感，试试其他筛选</p>
+    </div>
+  </div>
+
+  <div class="design-view" id="designView">
+  <div class="main-card">
+    <!-- Step 1: 上传空间 -->
+    <div class="step-container active" id="step1">
+      <h2 class="step-title">上传你的空间</h2>
+      <p class="step-subtitle">上传毛坯房或老房照片，AI 将为你量身打造装修方案</p>
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+        <div id="uploadPlaceholder">
+          <div class="upload-icon">&#128247;</div>
+          <div class="upload-text">拖拽或点击上传房间照片</div>
+          <div class="upload-hint">支持 JPG、PNG，建议正面拍摄效果更佳</div>
+          <div class="upload-btns">
+            <button class="btn-camera" onclick="event.stopPropagation();document.getElementById('fileInput').click()">&#128247; 拍照</button>
+            <button class="btn-album" onclick="event.stopPropagation();document.getElementById('fileInput').click()">&#128444; 相册选择</button>
+          </div>
+        </div>
+      </div>
+      <div class="step-actions">
+        <div></div>
+        <button class="btn-next" id="step1Next" onclick="goToStep(2)" disabled>下一步 &#8594;</button>
+      </div>
+    </div>
+
+    <!-- Step 2: AI 识别空间 -->
+    <div class="step-container" id="step2">
+      <h2 class="step-title">AI 识别你的空间</h2>
+      <p class="step-subtitle">AI 正在分析你的房间，识别空间特征...</p>
+      <div id="analyzeLoading" class="loading">
+        <div class="ring"></div>
+        <p>AI 正在识别你的空间...</p>
+      </div>
+      <div id="analyzeResult" style="display:none">
+        <div class="analysis-card">
+          <div class="analysis-title">&#10024; AI 识别结果</div>
+          <div class="analysis-row">
+            <span class="row-label">房间类型</span>
+            <span class="row-value" id="anRoomType">--</span>
+          </div>
+          <div class="analysis-row">
+            <span class="row-label">空间大小</span>
+            <span class="row-value" id="anRoomSize">--</span>
+          </div>
+          <div class="analysis-row">
+            <span class="row-label">采光情况</span>
+            <span class="row-value" id="anLighting">--</span>
+          </div>
+          <div class="analysis-row">
+            <span class="row-label">空间风格</span>
+            <span class="row-value" id="anStyle">--</span>
+          </div>
+          <div class="analysis-desc" id="anDesc">--</div>
+        </div>
+        <div class="step-actions">
+          <button class="btn-secondary" onclick="goToStep(1)">&#128260; 重新上传</button>
+          <button class="btn-next" onclick="goToStep(3)">识别准确，继续 &#8594;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: 选择装修方向 -->
+    <div class="step-container" id="step3">
+      <h2 class="step-title">选择装修方向</h2>
+      <p class="step-subtitle">根据你的偏好，定制专属装修方案</p>
+
+      <div class="dimension-group">
+        <div class="dimension-label">风格</div>
+        <div class="style-grid" data-dim="style">
+          <div class="style-card" data-val="奶油风"><img class="style-thumb" src="/styles/奶油风.png" alt="奶油风"><span class="style-name">奶油风</span></div>
+          <div class="style-card active" data-val="现代简约"><img class="style-thumb" src="/styles/现代简约.png" alt="现代简约"><span class="style-name">现代简约</span></div>
+          <div class="style-card" data-val="原木风"><img class="style-thumb" src="/styles/日式和风.png" alt="原木风"><span class="style-name">原木风</span></div>
+          <div class="style-card" data-val="北欧"><img class="style-thumb" src="/styles/北欧风格.png" alt="北欧"><span class="style-name">北欧</span></div>
+          <div class="style-card" data-val="工业风"><img class="style-thumb" src="/styles/工业风格.png" alt="工业风"><span class="style-name">工业风</span></div>
+          <div class="style-card" data-val="日式"><img class="style-thumb" src="/styles/日式和风.png" alt="日式"><span class="style-name">日式</span></div>
+          <div class="style-card" data-val="波西米亚"><img class="style-thumb" src="/styles/波西米亚.png" alt="波西米亚"><span class="style-name">波西米亚</span><span class="pro-badge">PRO</span></div>
+          <div class="style-card" data-val="装饰艺术"><img class="style-thumb" src="/styles/装饰艺术.png" alt="装饰艺术"><span class="style-name">装饰艺术</span><span class="pro-badge">PRO</span></div>
+          <div class="style-card" data-val="极简主义"><img class="style-thumb" src="/styles/极简主义.png" alt="极简主义"><span class="style-name">极简主义</span><span class="pro-badge">PRO</span></div>
+          <div class="style-card" data-val="轻奢"><img class="style-thumb" src="/styles/轻奢风格.png" alt="轻奢"><span class="style-name">轻奢</span><span class="pro-badge">PRO</span></div>
+          <div class="style-card" data-val="乡村田园"><img class="style-thumb" src="/styles/乡村田园.png" alt="乡村田园"><span class="style-name">乡村田园</span><span class="pro-badge">PRO</span></div>
+          <div class="style-card" data-val="新中式"><img class="style-thumb" src="/styles/新中式.png" alt="新中式"><span class="style-name">新中式</span><span class="pro-badge">PRO</span></div>
+        </div>
+      </div>
+
+      <div class="dimension-group" id="dimColorTone">
+        <div class="dimension-label">色调 <span class="pro-badge">PRO</span></div>
+        <div class="pill-row" data-dim="colorTone">
+          <div class="pill active" data-val="暖白">暖白</div>
+          <div class="pill" data-val="黑白灰">黑白灰</div>
+          <div class="pill" data-val="莫兰迪">莫兰迪</div>
+        </div>
+      </div>
+
+      <div class="dimension-group" id="dimBudget">
+        <div class="dimension-label">预算感 <span class="pro-badge">PRO</span></div>
+        <div class="pill-row" data-dim="budget">
+          <div class="pill" data-val="经济">经济</div>
+          <div class="pill active" data-val="中端">中端</div>
+          <div class="pill" data-val="豪宅">豪宅</div>
+        </div>
+      </div>
+
+      <div class="dimension-group" id="dimFurniture">
+        <div class="dimension-label">家具密度 <span class="pro-badge">PRO</span></div>
+        <div class="pill-row" data-dim="furniture">
+          <div class="pill" data-val="极简">极简</div>
+          <div class="pill active" data-val="正常">正常</div>
+          <div class="pill" data-val="丰富">丰富</div>
+        </div>
+      </div>
+
+      <div class="dimension-group" id="dimAtmosphere">
+        <div class="dimension-label">灯光氛围 <span class="pro-badge">PRO</span></div>
+        <div class="pill-row" data-dim="atmosphere">
+          <div class="pill active" data-val="温馨">温馨</div>
+          <div class="pill" data-val="高级酒店感">高级酒店感</div>
+          <div class="pill" data-val="自然光">自然光</div>
+        </div>
+      </div>
+
+      <div class="dimension-group">
+        <div class="dimension-label">会员等级</div>
+        <div class="level-selector" id="levelSelector">
+          <div class="level-pill active" data-level="free" onclick="selectLevel('free')">免费版</div>
+          <div class="level-pill" data-level="pro" onclick="selectLevel('pro')">专业版</div>
+          <div class="level-pill" data-level="premium" onclick="selectLevel('premium')">旗舰版</div>
+        </div>
+      </div>
+
+      <div class="dimension-group" id="customPromptGroup">
+        <div class="dimension-label">自定义需求 <span class="pro-badge">PRO</span></div>
+        <textarea id="customPrompt" class="custom-prompt" placeholder="描述你对房间的具体要求，例如：&#10;· 喜欢暖色调，希望有大量自然光&#10;· 需要一个书架和办公区域&#10;· 地板用深色木纹，墙面留白"></textarea>
+        <div class="prompt-hint" id="promptHint">提示词越详细，生成结果越贴合你的需求</div>
+        <div class="prompt-lock" id="promptLock" onclick="showUpgradeTip()">
+          <span class="lock-icon">&#128274;</span> 升级专业版解锁自定义需求
+        </div>
+      </div>
+
+      <div class="res-selector" id="resSelector">
+        <div class="res-option active" data-res="1K" onclick="selectRes('1K')">
+          1K 标清
+          <div class="res-cost">5 创想点</div>
+        </div>
+        <div class="res-option locked" data-res="2K" onclick="selectRes('2K')">
+          2K 高清
+          <div class="res-cost">20 创想点</div>
+        </div>
+        <div class="res-option locked" data-res="4K" onclick="selectRes('4K')">
+          4K 超清
+          <div class="res-cost">50 创想点</div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn-prev" onclick="goToStep(2)">&#8592; 上一步</button>
+        <button class="btn-generate" onclick="startGenerate()">开始生成</button>
+      </div>
+    </div>
+
+    <!-- Step 4: AI 生成 -->
+    <div class="step-container" id="step4">
+      <h2 class="step-title">AI 生成方案</h2>
+      <p class="step-subtitle">基于你的空间和偏好，AI 正在生成装修方案...</p>
+      <div id="generateLoading" class="loading">
+        <div class="ring"></div>
+        <p>AI 正在为你生成方案...</p>
+      </div>
+      <div id="generateResult" style="display:none">
+        <div class="success-tag">生成完成</div>
+        <div class="compare-wrap">
+          <div class="compare-item">
+            <div class="compare-label">原始空间</div>
+            <img id="compareOriginal" class="compare-img" src="" alt="原图">
+          </div>
+          <div class="compare-arrow">&#8594;</div>
+          <div class="compare-item">
+            <div class="compare-label">设计方案</div>
+            <img id="compareDesign" class="compare-img" src="" alt="设计方案">
+          </div>
+        </div>
+        <div class="meta" id="resultMeta"></div>
+        <div class="step-actions" style="margin-top:20px">
+          <button class="btn-prev" onclick="goToStep(3)">&#8592; 上一步</button>
+          <div style="display:flex;gap:12px">
+            <button class="btn-secondary" id="regenBtn" onclick="doGenerate()" style="display:none">&#128260; 再生成一套</button>
+            <button class="btn-next" onclick="selectScheme()">选择此方案 &#8594;</button>
+          </div>
+        </div>
+        <div class="regen-hint" id="regenHint" style="display:none">
+          <span class="pro-badge">PRO</span> 升级专业版可多次生成不同方案
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: 微调 -->
+    <div class="step-container" id="step5">
+      <h2 class="step-title">微调方案</h2>
+      <p class="step-subtitle">选中方案已加载，告诉我你想调整什么</p>
+      <img id="refineImage" class="refine-image" src="" alt="选中方案">
+      <div class="refine-input-wrap">
+        <textarea id="refineInput" class="refine-input" placeholder="告诉我你想调整什么..."></textarea>
+        <div class="refine-examples">
+          <span class="refine-example" onclick="setRefine('沙发换浅色')">沙发换浅色</span>
+          <span class="refine-example" onclick="setRefine('增加绿植')">增加绿植</span>
+          <span class="refine-example" onclick="setRefine('改成深木色')">改成深木色</span>
+          <span class="refine-example" onclick="setRefine('电视墙更高级')">电视墙更高级</span>
+        </div>
+      </div>
+      <div id="refineLoading" class="loading" style="display:none">
+        <div class="ring"></div>
+        <p>AI 正在微调方案...</p>
+      </div>
+      <div class="step-actions">
+        <button class="btn-secondary" onclick="goToStep(1)">&#128260; 重新开始</button>
+        <div style="display:flex;gap:12px">
+          <button class="btn-download" id="downloadBtn" onclick="downloadResult()">下载方案</button>
+          <button class="btn-next" id="refineBtn" onclick="doRefine()">微调生成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="coming-soon">
+    <div class="coming-card">
+      <div class="lock-overlay">&#128274;</div>
+      <div class="card-icon">&#128247;</div>
+      <h3>家具试摆</h3>
+      <p>拍下心仪的家具，上传房间照片，AI 即刻帮你预览家具放入房间的真实效果，买前先看，告别盲选。</p>
+      <div class="badge-soon">待开发 · 敬请期待</div>
+    </div>
+    <div class="coming-card">
+      <div class="lock-overlay">&#128274;</div>
+      <div class="card-icon">&#128137;</div>
+      <h3>房间焕新</h3>
+      <p>提交你的房间照片，选择喜欢的风格，AI 一键生成多套改造方案，从软装到硬装全面预览焕新效果。</p>
+      <div class="badge-soon">待开发 · 敬请期待</div>
+    </div>
+  </div>
+  <div class="footer">栖界AI &mdash; 混合AI网关 &mdash; GPT-Image &rarr; Gemini3 &rarr; 豆包</div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal auth-modal-content">
+    <button class="modal-close" onclick="closeModal('auth')">&times;</button>
+    <h2 id="authTitle">&#127968; 欢迎来到栖界</h2>
+    <p class="auth-subtitle" id="authSubtitle">登录后享受完整设计体验</p>
+    <div class="auth-gift" id="authGift" style="display:none;">&#127873; 注册即送 10 创想点，每日恢复 10 点</div>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-form" id="authForm">
+      <input class="auth-input" id="authPhone" type="tel" placeholder="手机号" maxlength="11">
+      <input class="auth-input" id="authPassword" type="password" placeholder="密码" maxlength="20">
+      <input class="auth-input" id="authNickname" type="text" placeholder="昵称（选填）" maxlength="12" style="display:none;">
+      <button class="auth-submit" id="authSubmit" onclick="submitAuth()">登录</button>
+    </div>
+    <div class="auth-switch" id="authSwitch">
+      还没有账号？<a onclick="switchAuthMode('register')">立即注册</a>
+    </div>
+  </div>
+</div>
+
+<!-- Recharge Modal -->
+<div class="modal-overlay" id="rechargeModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('recharge')">&times;</button>
+    <h2>&#10024; 充值创想点</h2>
+    <p class="sub">充值积分永不过期，随时可用</p>
+    <div class="pkg-grid" id="pkgGrid"></div>
+    <div style="text-align:center;margin-top:8px;">
+      <p style="font-size:0.72rem;color:var(--text-secondary);">100 创想点 = 20张1K图 / 5张2K图 / 2张4K图</p>
+    </div>
+  </div>
+</div>
+
+<!-- Upgrade Modal -->
+<div class="modal-overlay" id="upgradeModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('upgrade')">&times;</button>
+    <h2>&#127968; 装修通行证</h2>
+    <p class="sub">短期冲刺，全功能解锁，装修完即停</p>
+    <div class="pass-grid" id="passGrid"></div>
+  </div>
+</div>
+
+<script>
+// ========== 全局状态 ==========
+let currentStep = 1;
+let uploadedImageUrl = '';
+let analysisData = null;
+let generatedImages = [];
+let selectedImageUrl = '';
+let userLevel = 'free';
+
+// 维度选择状态
+const selections = {
+  style: '现代简约',
+  colorTone: '暖白',
+  budget: '中端',
+  furniture: '正常',
+  atmosphere: '温馨'
+};
+
+// 风格背景图映射
+const STYLE_BG_MAP = {
+  '奶油风': '/styles/奶油风.png',
+  '现代简约': '/styles/现代简约.png',
+  '原木风': '/styles/日式和风.png',
+  '北欧': '/styles/北欧风格.png',
+  '工业风': '/styles/工业风格.png',
+  '日式': '/styles/日式和风.png',
+  '波西米亚': '/styles/波西米亚.png',
+  '装饰艺术': '/styles/装饰艺术.png',
+  '极简主义': '/styles/极简主义.png',
+  '轻奢': '/styles/轻奢风格.png',
+  '乡村田园': '/styles/乡村田园.png',
+  '新中式': '/styles/新中式.png'
+};
+
+// ========== 初始化背景 ==========
+const bgEl = document.getElementById('styleBg');
+const bgImages = [...new Set(Object.values(STYLE_BG_MAP))];
+bgImages.forEach((img, i) => {
+  const div = document.createElement('div');
+  div.className = 'slide' + (i === 0 ? ' active' : '');
+  div.style.backgroundImage = 'url(' + img + ')';
+  div.style.backgroundSize = 'cover';
+  div.style.backgroundPosition = 'center';
+  div.dataset.img = img;
+  bgEl.appendChild(div);
+});
+let prevBgImg = bgImages[0];
+
+function switchBg(imgUrl) {
+  if (imgUrl === prevBgImg) return;
+  const slides = bgEl.querySelectorAll('.slide');
+  let newIdx = -1, oldIdx = -1;
+  slides.forEach((s, i) => {
+    if (s.dataset.img === imgUrl) newIdx = i;
+    if (s.dataset.img === prevBgImg) oldIdx = i;
+  });
+  if (newIdx === -1) return;
+  const dir = newIdx > oldIdx ? 'slide-left' : 'slide-right';
+  slides.forEach(s => { s.classList.remove('active', 'slide-left', 'slide-right'); });
+  slides[newIdx].classList.add('active', dir);
+  prevBgImg = imgUrl;
+}
+
+// ========== 步骤导航 ==========
+function goToStep(step) {
+  if (step < 1 || step > 5) return;
+  // Step 1 -> 2 需要触发分析
+  if (step === 2 && currentStep === 1) {
+    if (!uploadedImageUrl) return;
+    currentStep = step;
+    updateStepUI();
+    analyzeRoom();
+    return;
+  }
+  currentStep = step;
+  updateStepUI();
+}
+
+function updateStepUI() {
+  // 更新步骤容器
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('step' + i);
+    el.classList.remove('active');
+    if (i === currentStep) el.classList.add('active');
+  }
+  // 更新进度条
+  const dots = document.querySelectorAll('.step-dot');
+  const lines = document.querySelectorAll('.step-line');
+  dots.forEach(dot => {
+    const s = parseInt(dot.dataset.step);
+    dot.classList.remove('active', 'done');
+    if (s === currentStep) dot.classList.add('active');
+    else if (s < currentStep) dot.classList.add('done');
+  });
+  lines.forEach(line => {
+    const l = parseInt(line.dataset.line);
+    line.classList.remove('done');
+    if (l < currentStep) line.classList.add('done');
+  });
+}
+
+// ========== 图片上传 ==========
+const fileInput = document.getElementById('fileInput');
+const uploadArea = document.getElementById('uploadArea');
+
+// 拖拽支持
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = 'rgba(212,175,55,0.6)'; });
+uploadArea.addEventListener('dragleave', e => { e.preventDefault(); uploadArea.style.borderColor = ''; });
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.style.borderColor = '';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    handleFile(file);
+  }
+});
+
+fileInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) handleFile(file);
+});
+
+async function handleFile(file) {
+  // 本地预览
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    uploadArea.classList.add('has-image');
+    uploadArea.innerHTML = '<img class="upload-preview" src="' + ev.target.result + '" alt="房间照片"><button class="upload-remove" onclick="removeImage(event)">&#10005;</button>';
+    document.getElementById('step1Next').disabled = false;
+  };
+  reader.readAsDataURL(file);
+
+  // 上传到服务器
+  const formData = new FormData();
+  formData.append('image', file);
+  try {
+    const r = await fetch('/api/upload', { method: 'POST', body: formData });
+    const d = await r.json();
+    if (d.url) { uploadedImageUrl = d.url; }
+  } catch (err) { console.error('Upload failed:', err); }
+}
+
+function removeImage(e) {
+  e.stopPropagation();
+  uploadedImageUrl = '';
+  fileInput.value = '';
+  uploadArea.classList.remove('has-image');
+  uploadArea.innerHTML = '<div id="uploadPlaceholder"><div class="upload-icon">&#128247;</div><div class="upload-text">拖拽或点击上传房间照片</div><div class="upload-hint">支持 JPG、PNG，建议正面拍摄效果更佳</div><div class="upload-btns"><button class="btn-camera" onclick="event.stopPropagation();document.getElementById(&quot;fileInput&quot;).click()">&#128247; 拍照</button><button class="btn-album" onclick="event.stopPropagation();document.getElementById(&quot;fileInput&quot;).click()">&#128444; 相册选择</button></div></div>';
+  document.getElementById('step1Next').disabled = true;
+}
+
+// ========== Step 2: AI 分析 ==========
+async function analyzeRoom() {
+  const loading = document.getElementById('analyzeLoading');
+  const result = document.getElementById('analyzeResult');
+  loading.style.display = 'block';
+  result.style.display = 'none';
+  try {
+    const r = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: uploadedImageUrl })
+    });
+    const d = await r.json();
+    if (d.success && d.analysis) {
+      analysisData = d.analysis;
+      document.getElementById('anRoomType').textContent = d.analysis.roomType || '--';
+      document.getElementById('anRoomSize').textContent = d.analysis.roomSize || '--';
+      document.getElementById('anLighting').textContent = d.analysis.lighting || '--';
+      document.getElementById('anStyle').textContent = d.analysis.currentStyle || '--';
+      document.getElementById('anDesc').textContent = d.analysis.description || '--';
+    }
+  } catch (e) {
+    console.error('Analyze failed:', e);
+    analysisData = { roomType: '客厅', roomSize: '中等', lighting: '自然采光良好', currentStyle: '现代简约', description: '这是一个中等大小的客厅，采光良好，目前采用现代简约风格装修。' };
+    document.getElementById('anRoomType').textContent = analysisData.roomType;
+    document.getElementById('anRoomSize').textContent = analysisData.roomSize;
+    document.getElementById('anLighting').textContent = analysisData.lighting;
+    document.getElementById('anStyle').textContent = analysisData.currentStyle;
+    document.getElementById('anDesc').textContent = analysisData.description;
+  }
+  loading.style.display = 'none';
+  result.style.display = 'block';
+}
+
+// ========== Step 3: 选择器 ==========
+// 免费用户可选的风格（前6个）
+const FREE_STYLES = ['奶油风', '现代简约', '原木风', '北欧', '工业风', '日式'];
+
+// 风格卡片选择器
+document.querySelectorAll('.style-grid[data-dim="style"] .style-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const val = card.dataset.val;
+    // 免费用户风格限制
+    if (userLevel === 'free' && !FREE_STYLES.includes(val)) {
+      alert('升级专业版解锁更多风格');
+      return;
+    }
+    document.querySelectorAll('.style-grid[data-dim="style"] .style-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    selections.style = val;
+    if (STYLE_BG_MAP[val]) switchBg(STYLE_BG_MAP[val]);
+  });
+});
+
+// 其他维度 pill 选择器
+document.querySelectorAll('.pill-row').forEach(row => {
+  const dim = row.dataset.dim;
+  row.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      if (userLevel === 'free') {
+        alert('升级专业版解锁更多选项');
+        return;
+      }
+      row.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      selections[dim] = pill.dataset.val;
+    });
+  });
+});
+
+// 会员等级
+function selectLevel(level) {
+  userLevel = level;
+  document.querySelectorAll('.level-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.level === level);
+  });
+  toggleCustomPrompt();
+  toggleProDimensions();
+}
+
+function toggleProDimensions() {
+  const proGroups = ['dimColorTone', 'dimBudget', 'dimFurniture', 'dimAtmosphere'];
+  const isFree = (userLevel === 'free');
+  proGroups.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.opacity = isFree ? '0.35' : '1';
+    el.style.pointerEvents = isFree ? 'none' : 'auto';
+  });
+  // 风格卡片中PRO标记的锁定状态
+  document.querySelectorAll('.style-grid[data-dim="style"] .style-card').forEach(card => {
+    const val = card.dataset.val;
+    if (!FREE_STYLES.includes(val)) {
+      card.classList.toggle('style-locked', isFree);
+    }
+  });
+}
+
+function toggleCustomPrompt() {
+  const textarea = document.getElementById('customPrompt');
+  const lock = document.getElementById('promptLock');
+  const hint = document.getElementById('promptHint');
+  if (userLevel === 'free') {
+    textarea.disabled = true;
+    textarea.value = '';
+    lock.classList.add('visible');
+    hint.style.display = 'none';
+  } else {
+    textarea.disabled = false;
+    lock.classList.remove('visible');
+    hint.style.display = 'block';
+  }
+}
+
+function showUpgradeTip() {
+  alert('请选择专业版或旗舰版以解锁自定义需求功能');
+}
+
+toggleCustomPrompt();
+toggleProDimensions();
+
+// ========== 每日生成限额 ==========
+function getDailyKey() {
+  const today = new Date().toISOString().slice(0, 10);
+  return 'qijie_daily_' + today;
+}
+function getDailyCount() {
+  const raw = localStorage.getItem(getDailyKey());
+  return raw ? parseInt(raw, 10) : 0;
+}
+function addDailyCount() {
+  localStorage.setItem(getDailyKey(), String(getDailyCount() + 1));
+}
+function canGenerateToday() {
+  if (userLevel !== 'free') return true; // 付费用户不限
+  return getDailyCount() < 1;
+}
+
+// ========== Step 4: 生成 ==========
+async function startGenerate() {
+  // 每日限额检查
+  if (!canGenerateToday()) {
+    alert('免费用户每天只能生成 1 套方案，升级专业版可多次生成');
+    return;
+  }
+  goToStep(4);
+  await doGenerate();
+}
+
+async function doGenerate() {
+  // 付费用户再生成时也检查
+  if (userLevel === 'free' && !canGenerateToday()) {
+    alert('免费用户每天只能生成 1 套方案，升级专业版可多次生成');
+    return;
+  }
+  const loading = document.getElementById('generateLoading');
+  const result = document.getElementById('generateResult');
+  loading.style.display = 'block';
+  result.style.display = 'none';
+  try {
+    const body = {
+      imageUrl: uploadedImageUrl,
+      roomType: analysisData ? analysisData.roomType : '客厅',
+      style: selections.style + ' interior design',
+      userLevel: userLevel,
+      mode: 'auto',
+      atmosphere: selections.atmosphere,
+      budget: selections.budget,
+      customPrompt: document.getElementById('customPrompt').value || '',
+      resolution: currentRes,
+      userId: currentUser ? currentUser.id : 'demo_user'
+    };
+    const r = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.success) {
+      generatedImages = d.images || [];
+      addDailyCount(); // 记录本次生成
+      renderCompareResult(d);
+      loading.style.display = 'none';
+      result.style.display = 'block';
+    } else {
+      loading.innerHTML = '<p class="error-msg">生成失败: ' + (d.error || '未知错误') + '</p><button class="btn-secondary" onclick="goToStep(3)" style="margin-top:12px">&#8592; 返回重试</button>';
+    }
+  } catch (e) {
+    loading.innerHTML = '<p class="error-msg">请求失败: ' + e.message + '</p><button class="btn-secondary" onclick="goToStep(3)" style="margin-top:12px">&#8592; 返回重试</button>';
+  }
+}
+
+function renderCompareResult(data) {
+  // 设置原图对比
+  document.getElementById('compareOriginal').src = uploadedImageUrl;
+  // 设置生成的设计方案图
+  if (generatedImages.length > 0) {
+    document.getElementById('compareDesign').src = generatedImages[0];
+    selectedImageUrl = generatedImages[0];
+  }
+  // 元信息
+  const meta = document.getElementById('resultMeta');
+  meta.innerHTML = '<span>' + (data.provider || '') + '</span><span>' + (data.quality || '') + '</span><span>' + ((data.duration || 0) / 1000).toFixed(1) + 's</span><span>$' + (data.cost || 0).toFixed(4) + '</span>';
+  // 再生成按钮逻辑
+  const regenBtn = document.getElementById('regenBtn');
+  const regenHint = document.getElementById('regenHint');
+  if (userLevel === 'free') {
+    regenBtn.style.display = 'none';
+    regenHint.style.display = 'block';
+  } else {
+    regenBtn.style.display = 'inline-flex';
+    regenHint.style.display = 'none';
+  }
+}
+
+function selectScheme() {
+  selectedImageUrl = generatedImages[0] || selectedImageUrl;
+  document.getElementById('refineImage').src = selectedImageUrl;
+  document.getElementById('refineInput').value = '';
+  goToStep(5);
+}
+
+// ========== Step 5: 微调 ==========
+function setRefine(text) {
+  document.getElementById('refineInput').value = text;
+}
+
+async function doRefine() {
+  const prompt = document.getElementById('refineInput').value.trim();
+  if (!prompt) return;
+  const loading = document.getElementById('refineLoading');
+  const refineBtn = document.getElementById('refineBtn');
+  loading.style.display = 'block';
+  refineBtn.disabled = true;
+  try {
+    const body = {
+      imageUrl: uploadedImageUrl,
+      roomType: analysisData ? analysisData.roomType : '客厅',
+      style: selections.style + ' interior design',
+      selectedImageUrl: selectedImageUrl,
+      refinePrompt: prompt,
+      userLevel: userLevel,
+      userId: currentUser ? currentUser.id : 'demo_user'
+    };
+    const r = await fetch('/api/refine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.success && d.images && d.images.length > 0) {
+      selectedImageUrl = d.images[0];
+      document.getElementById('refineImage').src = selectedImageUrl;
+      document.getElementById('refineInput').value = '';
+    } else {
+      alert('微调失败: ' + (d.error || '未知错误'));
+    }
+  } catch (e) {
+    alert('请求失败: ' + e.message);
+  }
+  loading.style.display = 'none';
+  refineBtn.disabled = false;
+}
+
+function downloadResult() {
+  if (selectedImageUrl) {
+    const a = document.createElement('a');
+    a.href = selectedImageUrl;
+    a.download = '栖界AI_方案.png';
+    a.target = '_blank';
+    a.click();
+  }
+}
+
+// ========== Provider 状态 ==========
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/providers/status');
+    const d = await r.json();
+    const set = (id, v) => {
+      const e = document.getElementById(id);
+      e.textContent = v ? '在线' : '离线';
+      e.className = 'value ' + (v ? 'ok' : 'err');
+    };
+    set('stGpt', d.providers['gpt-image']);
+    set('stGem', d.providers['gemini3']);
+    set('stDb', d.providers['doubao']);
+  } catch (e) { console.error(e); }
+}
+checkStatus();
+
+// ========== Auth + Points System ==========
+let currentUser = null;
+let authToken = null;
+let authMode = 'login';
+let currentRes = '1K';
+let userTier = 'free';
+
+function initAuth() {
+  const saved = localStorage.getItem('nestify_auth');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      authToken = data.token;
+      currentUser = data.user;
+      verifyAuth();
+    } catch(e) { localStorage.removeItem('nestify_auth'); }
+  }
+  if (!currentUser) showLoginState();
+}
+
+async function verifyAuth() {
+  if (!authToken) { showLoginState(); return; }
+  try {
+    const r = await fetch('/api/auth/verify', { headers: { 'Authorization': 'Bearer ' + authToken } });
+    const d = await r.json();
+    if (d.success) { currentUser = d.user; showLoggedInState(); loadPointsInfo(); }
+    else logout();
+  } catch(e) { showLoggedInState(); }
+}
+
+function showLoginState() {
+  document.getElementById('userInfo').innerHTML = '<div class="login-prompt" id="loginPrompt"><span>登录后保存设计记录</span><button class="btn-login" onclick="openModal(&apos;auth&apos;)">登录 / 注册</button></div>';
+  document.getElementById('pointsBar').style.display = 'none';
+}
+
+function showLoggedInState() {
+  document.getElementById('userInfo').innerHTML = '<div class="user-avatar">' + (currentUser.avatar || '🏠') + '</div><div><div class="user-name">' + (currentUser.nickname || '用户') + '</div></div><button class="btn-logout" onclick="logout()">退出</button>';
+  document.getElementById('pointsBar').style.display = 'flex';
+}
+
+async function submitAuth() {
+  const phone = document.getElementById('authPhone').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const nickname = document.getElementById('authNickname').value.trim();
+  const errorEl = document.getElementById('authError');
+  errorEl.textContent = '';
+  if (!phone || !password) { errorEl.textContent = '请填写手机号和密码'; return; }
+  try {
+    const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const body = authMode === 'register' ? { phone, password, nickname: nickname || undefined } : { phone, password };
+    const r = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.success) {
+      authToken = d.token; currentUser = d.user;
+      localStorage.setItem('nestify_auth', JSON.stringify({ token: d.token, user: d.user }));
+      showLoggedInState(); loadPointsInfo(); closeModal('auth');
+    } else { errorEl.textContent = d.error || '操作失败'; }
+  } catch(e) { errorEl.textContent = '网络错误，请重试'; }
+}
+
+function switchAuthMode(mode) {
+  authMode = mode;
+  const title = document.getElementById('authTitle');
+  const subtitle = document.getElementById('authSubtitle');
+  const nicknameInput = document.getElementById('authNickname');
+  const submitBtn = document.getElementById('authSubmit');
+  const switchEl = document.getElementById('authSwitch');
+  const giftEl = document.getElementById('authGift');
+  if (mode === 'register') {
+    title.textContent = '🏠 创建账号';
+    subtitle.textContent = '注册即送 10 创想点，每日恢复 10 点';
+    nicknameInput.style.display = 'block';
+    submitBtn.textContent = '注册';
+    switchEl.innerHTML = '已有账号？<a onclick="switchAuthMode(&apos;login&apos;)">立即登录</a>';
+    giftEl.style.display = 'block';
+  } else {
+    title.textContent = '🏠 欢迎回来';
+    subtitle.textContent = '登录后继续你的设计之旅';
+    nicknameInput.style.display = 'none';
+    submitBtn.textContent = '登录';
+    switchEl.innerHTML = '还没有账号？<a onclick="switchAuthMode(&apos;register&apos;)">立即注册</a>';
+    giftEl.style.display = 'none';
+  }
+  document.getElementById('authError').textContent = '';
+}
+
+function logout() {
+  if (authToken) fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + authToken } }).catch(() => {});
+  authToken = null; currentUser = null;
+  localStorage.removeItem('nestify_auth');
+  showLoginState();
+}
+
+// ========== Points ==========
+async function loadPointsInfo() {
+  if (!currentUser) return;
+  try {
+    const r = await fetch('/api/points/' + currentUser.id, { headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} });
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('pointsDisplay').textContent = d.points;
+      userTier = d.tier;
+      const badge = document.getElementById('tierBadge');
+      badge.textContent = d.benefits.labelCN;
+      badge.className = 'points-tier tier-' + d.tier;
+      updateResOptions(d.benefits.availableResolutions);
+      updateStyleAccess(d.benefits.allStyles);
+    }
+  } catch(e) { console.error('Points load failed:', e); }
+}
+
+function updateResOptions(available) {
+  document.querySelectorAll('.res-option').forEach(opt => {
+    const res = opt.dataset.res;
+    if (available.includes(res)) opt.classList.remove('locked');
+    else { opt.classList.add('locked'); if (currentRes === res) { currentRes = '1K'; selectRes('1K'); } }
+  });
+}
+
+function updateStyleAccess(allStyles) {
+  const freeStyles = ['奶油风','现代简约','原木风','北欧','工业风','日式'];
+  document.querySelectorAll('.pill-row[data-dim="style"] .pill').forEach(pill => {
+    const val = pill.dataset.val;
+    if (allStyles || freeStyles.includes(val)) pill.classList.remove('locked-overlay','disabled');
+    else pill.classList.add('locked-overlay','disabled');
+  });
+}
+
+function selectRes(res) {
+  const opt = document.querySelector('.res-option[data-res="' + res + '"]');
+  if (opt && opt.classList.contains('locked')) { openModal('upgrade'); return; }
+  currentRes = res;
+  document.querySelectorAll('.res-option').forEach(o => o.classList.toggle('active', o.dataset.res === res));
+}
+
+async function buyPackage(pkgId) {
+  if (!currentUser) { openModal('auth'); return; }
+  try {
+    const r = await fetch('/api/points/' + currentUser.id + '/recharge', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken }, body: JSON.stringify({ packageId: pkgId }) });
+    const d = await r.json();
+    if (d.success) { loadPointsInfo(); closeModal('recharge'); }
+  } catch(e) { console.error('Buy failed:', e); }
+}
+
+async function buyPass(passId) {
+  if (!currentUser) { openModal('auth'); return; }
+  try {
+    const r = await fetch('/api/points/' + currentUser.id + '/activate-pass', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken }, body: JSON.stringify({ passId }) });
+    const d = await r.json();
+    if (d.success) { loadPointsInfo(); closeModal('upgrade'); }
+  } catch(e) { console.error('Activate failed:', e); }
+}
+
+// ========== Inspiration Feed ==========
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+let currentTab = 'feed';
+let currentFilter = 'all';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('feedView').classList.toggle('active', tab === 'feed');
+  document.getElementById('designView').classList.toggle('active', tab === 'design');
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'feed') || (i === 1 && tab === 'design'));
+  });
+  if (tab === 'feed') loadFeed();
+}
+
+async function loadFeed() {
+  const grid = document.getElementById('feedGrid');
+  const empty = document.getElementById('feedEmpty');
+  const params = new URLSearchParams();
+  if (currentFilter !== 'all') params.set('style', currentFilter);
+  try {
+    const r = await fetch('/api/inspirations?' + params.toString());
+    const d = await r.json();
+    if (d.success && d.items.length > 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'none';
+      d.items.forEach(item => {
+        grid.innerHTML += '<div class="masonry-item" onclick="useInspiration(&apos;' + escapeHtml(item.id) + '&apos;)">' +
+          '<img src="' + escapeHtml(item.imageUrl) + '" alt="' + escapeHtml(item.title) + '" loading="lazy">' +
+          '<span class="masonry-style">' + escapeHtml(item.style) + '</span>' +
+          '<span class="masonry-like">&#10084; ' + item.likes + '</span>' +
+          '<div class="masonry-overlay">' +
+            '<div class="masonry-title">' + escapeHtml(item.title) + '</div>' +
+            '<div class="masonry-desc">' + escapeHtml(item.description) + '</div>' +
+            '<div class="masonry-tags">' + item.tags.map(t => '<span class="masonry-tag">' + escapeHtml(t) + '</span>').join('') + '</div>' +
+          '</div>' +
+          '<button class="masonry-cta" onclick="event.stopPropagation();useInspiration(&apos;' + escapeHtml(item.id) + '&apos;)">用此风格设计</button>' +
+        '</div>';
+      });
+    } else { grid.innerHTML = ''; empty.style.display = 'block'; }
+  } catch(e) { console.error('Feed load failed:', e); }
+}
+
+function filterFeed(style) {
+  currentFilter = style;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter === style));
+  loadFeed();
+}
+
+async function useInspiration(id) {
+  try {
+    const r = await fetch('/api/inspirations/' + id);
+    const d = await r.json();
+    if (d.success && d.item) {
+      selections.style = d.item.style;
+      document.querySelectorAll('.pill-row[data-dim="style"] .pill').forEach(p => p.classList.toggle('active', p.dataset.val === d.item.style));
+      if (STYLE_BG_MAP[d.item.style]) switchBg(STYLE_BG_MAP[d.item.style]);
+      switchTab('design');
+    }
+  } catch(e) { console.error('Use inspiration failed:', e); switchTab('design'); }
+}
+
+// ========== Modal ==========
+function openModal(type) {
+  document.getElementById(type + 'Modal').classList.add('active');
+  if (type === 'recharge') loadPackages();
+  if (type === 'upgrade') loadPasses();
+}
+
+function closeModal(type) {
+  document.getElementById(type + 'Modal').classList.remove('active');
+}
+
+async function loadPackages() {
+  try {
+    const r = await fetch('/api/packages');
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('pkgGrid').innerHTML = d.packages.map(pkg => 
+        '<div class="pkg-card' + (pkg.popular ? ' popular' : '') + '" onclick="buyPackage(&apos;' + escapeHtml(pkg.id) + '&apos;)">' +
+          (pkg.popular ? '<div class="pkg-badge">热门</div>' : '') +
+          '<div class="pkg-points">' + pkg.points + ' 创想点</div>' +
+          (pkg.bonus > 0 ? '<div class="pkg-bonus">+' + pkg.bonus + ' 赠送</div>' : '') +
+          '<div class="pkg-price">' + pkg.priceLabel + '</div>' +
+        '</div>'
+      ).join('');
+    }
+  } catch(e) { console.error('Packages load failed:', e); }
+}
+
+async function loadPasses() {
+  try {
+    const r = await fetch('/api/passes');
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('passGrid').innerHTML = d.passes.map(pass =>
+        '<div class="pass-card" onclick="buyPass(&apos;' + escapeHtml(pass.id) + '&apos;)">' +
+          '<div class="pass-header"><div class="pass-title">' + pass.label + '</div><div class="pass-price">' + pass.priceLabel + '</div></div>' +
+          '<div class="pass-desc">' + pass.description + '</div>' +
+          '<div class="pass-features">' + pass.features.map(f => '<div class="pass-feat">' + f + '</div>').join('') + '</div>' +
+        '</div>'
+      ).join('');
+    }
+  } catch(e) { console.error('Passes load failed:', e); }
+}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('active'); });
+});
+
+// ========== Init ==========
+initAuth();
+loadFeed();
+</script>
+</body>
+</html>
